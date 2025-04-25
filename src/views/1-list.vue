@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { Button } from "@/components/ui/button";
-import { useListMock } from "../hooks/use-list-mock";
+import { useListData } from "../hooks/use-list-data";
 import { useVirtualList } from "@/hooks/use-list-virtual";
 
 const dataSizeList = [50, 100, 500, 1000];
 
-const { dataSize, listData, setDataSize } = useListMock(50);
+const { dataSize, listData, setDataSize } = useListData(50);
 const { containerRef, visibleItems, totalHeight, getItemTransform } =
-	useVirtualList(listData, {
-		itemHeight: 40, // Height of each item in pixels
-		buffer: 5, // Number of extra items to render above and below viewport
-	});
+	useVirtualList(listData, { itemHeight: 40, buffer: 5 });
 </script>
 
 <template>

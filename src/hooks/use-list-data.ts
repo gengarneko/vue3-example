@@ -15,7 +15,7 @@ export interface ListItem {
 
 const mockDataCache: Record<number, ListItem[]> = {};
 
-function generateMockData(count: number) {
+function generateData(count: number) {
 	if (mockDataCache[count]) {
 		return mockDataCache[count];
 	}
@@ -30,15 +30,15 @@ function generateMockData(count: number) {
 
 // * ------------------------------------------------------
 
-export function useListMock(initialSize = 50) {
+export function useListData(initialSize = 50) {
 	const dataSize = ref(initialSize);
 	const listData: Ref<ListItem[]> = ref([]);
 
-	listData.value = generateMockData(dataSize.value);
+	listData.value = generateData(dataSize.value);
 
 	const setDataSize = (size: number) => {
 		dataSize.value = size;
-		listData.value = generateMockData(size);
+		listData.value = generateData(size);
 	};
 
 	return {
