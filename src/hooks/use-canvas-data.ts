@@ -247,10 +247,12 @@ export function useCanvasData() {
 		}
 	};
 
+	// TODO: 重绘必要的部分 (需要计算重叠的元素有哪些，然后重新绘制)
 	const updatePolygon = () => {
-		if (!objects.value[50] || objects.value[50].type !== "polygon") return;
-		objects.value[50].position.x = getRandomNumber(50, 750);
-		objects.value[50].position.y = getRandomNumber(50, 450);
+		const polygon = objects.value.find((obj) => obj.index === 50);
+		if (!polygon || polygon.type !== "polygon") return;
+		polygon.position.x = getRandomNumber(50, 750);
+		polygon.position.y = getRandomNumber(50, 450);
 		drawObjects();
 	};
 
