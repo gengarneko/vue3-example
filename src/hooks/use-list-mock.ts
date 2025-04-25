@@ -13,11 +13,18 @@ export interface ListItem {
 
 // * ------------------------------------------------------
 
+const mockDataCache: Record<number, ListItem[]> = {};
+
 function generateMockData(count: number) {
+	if (mockDataCache[count]) {
+		return mockDataCache[count];
+	}
+
 	const data: ListItem[] = [];
 	for (let i = 1; i <= count; i++) {
 		data.push({ id: uuid(), title: `item ${i}` });
 	}
+	mockDataCache[count] = data;
 	return data;
 }
 
