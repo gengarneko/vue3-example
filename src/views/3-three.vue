@@ -19,8 +19,56 @@ let transformControls: TransformControls | null = null;
 // 交互模式
 const interactionMode = ref<"rotate" | "drag" | "scale">("rotate");
 
-// 初始化Three.js场景
-const initThreeJS = () => {
+let needsUpdate = true; // 控制是否需要渲染
+
+let animationFrameId: number | null = null;
+
+// 渲染函数 - 直接调用渲染
+const render = () => {
+	// 渲染场景
+	if (scene && camera && renderer) {
+		renderer.render(scene, camera);
+	}
+	// 重置状态
+	needsUpdate = false;
+};
+
+// 更新TransformControls大小 - 根据相机距离更新TransformControls大小
+const updateTransformControlsSize = () => {
+	if (camera && transformControls) {
+		const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+		const baseDistance = 5.2;
+		const ratio = baseDistance / distance;
+		const newSize = Math.max(0.5, Math.min(2.0, ratio));
+
+		// 只有当大小变化足够明显时才更新
+		if (Math.abs(newSize - transformControls.size) > 0.01) {
+			transformControls.setSize(newSize);
+			// 大小变化时需要渲染
+			return true;
+		}
+	}
+	return false;
+};
+
+// 动画循环 - 持续执行
+// 这个函数应该只调用一次，在组件挂载时
+const animate = () => {
+	// 请求下一帧动画
+	animationFrameId = requestAnimationFrame(animate);
+
+	// 如果需要更新，则渲染
+	if (needsUpdate) {
+		render();
+	}
+};
+
+// 请求更新 - 需要渲染时调用
+const requestUpdate = () => {
+	needsUpdate = true;
+};
+
+const init = () => {
 	if (!threeContainer.value) return;
 
 	// 创建场景
@@ -50,7 +98,6 @@ const initThreeJS = () => {
 	// 添加光源
 	const ambientLight = new THREE.AmbientLight(0x404040, 2);
 	scene.add(ambientLight);
-
 	const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 	directionalLight.position.set(1, 1, 1);
 	scene.add(directionalLight);
@@ -59,7 +106,6 @@ const initThreeJS = () => {
 	const geometry = new THREE.BoxGeometry(1, 1, 1);
 	const material = new THREE.MeshStandardMaterial({ color: 0x00aaff });
 	cube = new THREE.Mesh(geometry, material);
-	cube.rotation.y = -Math.PI / 6;
 	scene.add(cube);
 
 	// 添加网格辅助
@@ -70,6 +116,10 @@ const initThreeJS = () => {
 	orbitControls = new OrbitControls(camera, renderer.domElement);
 	orbitControls.enableDamping = true;
 	orbitControls.dampingFactor = 0.05;
+	orbitControls.addEventListener("change", () => {
+		updateTransformControlsSize();
+		requestUpdate();
+	});
 
 	// 初始化TransformControls
 	transformControls = new TransformControls(camera, renderer.domElement);
@@ -81,15 +131,17 @@ const initThreeJS = () => {
 	}
 
 	// TransformControls事件
+	transformControls.addEventListener("change", requestUpdate);
 	transformControls.addEventListener("dragging-changed", (event) => {
 		if (orbitControls) orbitControls.enabled = !event.value;
+		requestUpdate();
 	});
-
-	// 启动动画循环
-	animate();
 
 	// 处理窗口大小变化
 	window.addEventListener("resize", onWindowResize);
+
+	// 启动动画循环
+	animate();
 };
 
 // 窗口大小变化处理函数
@@ -106,28 +158,9 @@ const onWindowResize = () => {
 		threeContainer.value.clientWidth,
 		threeContainer.value.clientHeight,
 	);
-};
 
-// 动画循环
-const animate = () => {
-	requestAnimationFrame(animate);
-
-	// 更新OrbitControls
-	if (orbitControls) orbitControls.update();
-
-	// 更新TransformControls大小
-	if (transformControls && camera) {
-		const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
-		const baseDistance = 5.2;
-		const ratio = baseDistance / distance;
-		const size = Math.max(0.5, Math.min(2.0, ratio));
-		transformControls.setSize(size);
-	}
-
-	// 渲染场景
-	if (scene && camera && renderer) {
-		renderer.render(scene, camera);
-	}
+	// 请求更新
+	requestUpdate();
 };
 
 // 切换交互模式
@@ -140,16 +173,24 @@ const switchMode = (mode: "rotate" | "drag" | "scale") => {
 		} else {
 			transformControls.setMode(mode);
 		}
+		// 模式切换时触发渲染
+		requestUpdate();
 	}
 };
 
 // 组件挂载时初始化Three.js
 onMounted(() => {
-	initThreeJS();
+	init();
 });
 
 // 组件卸载时清理资源
 onUnmounted(() => {
+	// 取消动画循环
+	if (animationFrameId !== null) {
+		cancelAnimationFrame(animationFrameId);
+		animationFrameId = null;
+	}
+
 	if (renderer && threeContainer.value) {
 		threeContainer.value.removeChild(renderer.domElement);
 	}
